@@ -1,4 +1,4 @@
-package main
+package binary
 
 import (
 	"fmt"
@@ -9,20 +9,22 @@ type BinaryTree struct {
 	left          *BinaryTree
 	right         *BinaryTree
 	ComparatorMax func(interface{}, interface{}) bool
+	Equal         func(interface{}, interface{}) bool
 }
 
-func New(comparable func(interface{}, interface{}) bool) *BinaryTree {
+func New(comparable func(interface{}, interface{}) bool, equalable func(interface{}, interface{}) bool) *BinaryTree {
 	return &BinaryTree{
 		ComparatorMax: comparable,
 		data:          nil,
+		Equal:         equalable,
 	}
 }
 
 func (t *BinaryTree) Insert(val interface{}) {
 	if t.data == nil {
 		t.data = val
-		t.right = New(t.ComparatorMax)
-		t.left = New(t.ComparatorMax)
+		t.right = New(t.ComparatorMax, t.Equal)
+		t.left = New(t.ComparatorMax, t.Equal)
 	} else {
 		if t.ComparatorMax(val, t.data) {
 			t.right.Insert(val)
@@ -32,11 +34,10 @@ func (t *BinaryTree) Insert(val interface{}) {
 	}
 }
 
-func findMinFromNode(pretree **BinaryTree) interface{} {
+func FindMinFromNode(pretree **BinaryTree) interface{} {
 	tree := *pretree
 	if tree.left.data == nil {
 		value := tree.data
-		fmt.Printf("found value %v \n", value)
 		if tree.right.data != nil {
 			*pretree = tree.right
 		} else {
@@ -44,27 +45,49 @@ func findMinFromNode(pretree **BinaryTree) interface{} {
 		}
 		return value
 	} else {
-		fmt.Printf("node value: %v, leftValue: %v not found next one\n", tree.data, tree.left.data)
-		return findMinFromNode(&tree.left)
+		return FindMinFromNode(&tree.left)
+	}
+}
+
+func (t *BinaryTree) Search(val interface{}) interface{} {
+	if t.data == nil {
+		return nil
+	}
+	if t.Equal(t.data, val) {
+		return t.data
+	} else {
+		if t.ComparatorMax(val, t.data) {
+			return t.right.Search(val)
+		} else {
+			return t.left.Search(val)
+		}
 	}
 }
 
 func (t *BinaryTree) Remove(val interface{}) {
-	if val == t.data {
-		if t.right == nil && t.left == nil {
-			t.data = nil
-		} else if t.left != nil && t.right == nil {
-			t.data = t.left.data
-		} else if t.right != nil && t.left == nil {
-			t.data = t.right.data
+	if t.data != nil {
+		if t.Equal(t.data, val) {
+			if t.right.data == nil && t.left.data == nil {
+				t.data = nil
+			} else if t.left.data != nil && t.right.data == nil {
+				t.data = t.left.data
+			} else if t.right.data != nil && t.left.data == nil {
+				t.data = t.right.data
+			} else {
+				t.data = FindMinFromNode(&t.right)
+			}
 		} else {
-			t.data = findMinFromNode(&t.right)
+			if t.ComparatorMax(val, t.data) {
+				t.right.Remove(val)
+			} else {
+				t.left.Remove(val)
+			}
 		}
 	}
 }
 
 func (t *BinaryTree) Print(deep int, ch string) {
-	if t == nil {
+	if t.data == nil {
 		return
 	}
 
